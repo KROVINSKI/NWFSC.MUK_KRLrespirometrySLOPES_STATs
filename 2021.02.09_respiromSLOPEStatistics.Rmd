@@ -239,7 +239,7 @@ dSlopeTable
 
 # 4.) Summary Plots
 ## 4.a Plots 80% Slope for Corrected Slopes
-```{r}
+```{r plots for corrected 80% slopes}
 plot80 <- ggplot(ksSlopes.80, aes(Treatment, CorrSlope)) +
             geom_jitter(color = "grey") +
             geom_jitter(data = ksSlopes.80, aes(Treatment, CorrSlope)) +
