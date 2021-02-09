@@ -1,0 +1,817 @@
+
+---
+title: "Krill Respirometry Statistics - Summer 2019 Krill"
+output:
+ html_document:
+    df_print: paged
+    code_folding: hide
+    toc: TRUE
+    toc_depth: 4
+    toc_float: true
+    theme: cerulean
+    highlight: haddock
+    smart: false
+editor_options: 
+  chunk_output_type: inline
+---
+
+
+Hello World
+
+Author: OA Lab, NWFSC
+Title: Krill Respirometry Statistics - Summer 2019 Krill
+Date: February 2021 (R notebook document)
+
+
+# Version Check
+```{r 0.1 Version Check , echo=FALSE, results=FALSE, message=FALSE, warning=FALSE}
+#*********************************
+## Version Check
+#********************************* 
+R.version
+
+```
+
+
+
+# Libraries
+```{r 0.0 Libraries , echo=FALSE, results=FALSE, message=FALSE, warning=FALSE}
+#*********************************
+##Libraries
+#********************************* 
+library(stringr)
+library(tidyverse)
+library(plyr)
+library(nlme)
+library(tidyr)
+library(dbplyr)
+library(dplyr)
+library(purrr)
+library(wql)
+library(lubridate)
+library(tibbletime)
+library(arsenal)
+library(compareDF)
+#for graphing
+library(ggplot2)
+library(ggfortify)
+library(stringr)
+library(nlme)
+library(RColorBrewer)
+library(patchwork)
+#statistical analysis
+library(gdata)
+library(rsq)
+library(doBy)
+library(lme4)
+library(lmerTest)
+#Rnotebooks 
+library(gridExtra)
+library(kableExtra)
+
+```
+
+
+
+
+ 
+# 1.) Setting Working Directory
+```{r 1.) Setting Working Directory }
+#*********************************
+## 1.) Setting Working Directory
+#*********************************
+
+#set working directory to the correct folder
+setwd("/Users/katherinerovinski/GIT/NWFSC.MUK_KRLrespirometrySLOPES_STATs")
+```
+
+
+
+# 2.) DF Creation
+```{r 2.) Creating the Dataframe }
+
+#*********************************
+## 2.) Creating the intial Dataframe, dRESP
+#*********************************
+# 46 Vials Magic Number
+
+# 80% threshold
+ksSlopes.80 <- read.csv(file = "2021.02.09_ksSlopes.80.csv", stringsAsFactors = FALSE)
+
+#|- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - |
+
+# 70% threshold
+ksSlopes.70 <- read.csv(file = "2021.02.09_ksSlopes.70.csv", stringsAsFactors = FALSE)
+
+#|- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - |
+
+# 1hr threshold
+ksSlopes.1hr  <- read.csv(file = "2021.02.09_ksSlopes.1hr.csv", stringsAsFactors = FALSE)
+
+#|- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - |
+
+# all points
+dSlopes <- read.csv(file = "2021.02.09_Slopes_allpts.csv", stringsAsFactors = FALSE)
+
+#|- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - |
+
+
+```
+
+
+
+
+
+# 3.) Summary Statisitics on the Unfiltered Dataframe dSlopes
+```{r 3 Summary Statisitics on the Unfiltered Dataframe dSlopes}
+
+# factor(dSlopes$TrialID)
+# 
+# dSlopes <- filter(dSlopes, Treatment != "AMB")  
+# dSlopes<- droplevels(filter(dSlopes, Treatment != "AMB"))
+#ksSlopes.1hr<- droplevels(filter(ksSlopes1hr, Treatment != "n/a"))
+
+ksSlopes1hr.summary <- ksSlopes.1hr %>% group_by(Treatment) %>%
+  dplyr::summarize(sd = sd(CorrSlope, na.rm = TRUE), 
+            mean = mean(CorrSlope, na.rm = TRUE), 
+            median = median(CorrSlope, na.rm = TRUE),
+            IQR = IQR(CorrSlope, na.rm = TRUE),
+            n = n()) %>%
+  mutate(se = sd/sqrt(n)) %>%
+  mutate(ci = se*1.96)
+ksSlopes1hr.summary
+
+SlopeTable.1hr <- kable(ksSlopes1hr.summary, digits = 4)
+
+write.csv(ksSlopes1hr.summary, "2021.02.09_ksSlopes.1hr_summary.csv")
+
+#|- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - |
+
+ksSlopes80.summary <- ksSlopes.80 %>% group_by(Treatment) %>%
+  dplyr::summarize(sd = sd(CorrSlope, na.rm = TRUE), 
+            mean = mean(CorrSlope, na.rm = TRUE), 
+            median = median(CorrSlope, na.rm = TRUE),
+            IQR = IQR(CorrSlope, na.rm = TRUE),
+            n = n()) %>%
+  mutate(se = sd/sqrt(n)) %>%
+  mutate(ci = se*1.96)
+ksSlopes80.summary
+
+SlopeTable.80 <- kable(ksSlopes80.summary, digits = 4)
+
+write.csv(ksSlopes80.summary, "2021.02.09_ksSlopes.80_summary.csv")
+
+#|- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - |
+
+ksSlopes70.summary <- ksSlopes.70 %>% group_by(Treatment) %>%
+  dplyr::summarize(sd = sd(CorrSlope, na.rm = TRUE), 
+            mean = mean(CorrSlope, na.rm = TRUE), 
+            median = median(CorrSlope, na.rm = TRUE),
+            IQR = IQR(CorrSlope, na.rm = TRUE),
+            n = n()) %>%
+  mutate(se = sd/sqrt(n)) %>%
+  mutate(ci = se*1.96)
+ksSlopes70.summary
+
+SlopeTable.70 <- kable(ksSlopes70.summary, digits = 4)
+
+write.csv(ksSlopes70.summary, "2021.02.09_ksSlopes.70_summary.csv")
+
+#|- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - |
+
+dSlopes.summary <- dSlopes %>% group_by(Treatment) %>%
+  dplyr::summarize(sd = sd(CorrSlope, na.rm = TRUE), 
+            mean = mean(CorrSlope, na.rm = TRUE), 
+            median = median(CorrSlope, na.rm = TRUE),
+            IQR = IQR(CorrSlope, na.rm = TRUE),
+            n = n()) %>%
+  mutate(se = sd/sqrt(n)) %>%
+  mutate(ci = se*1.96)
+dSlopes.summary
+
+SlopeTable.allpts <- kable(dSlopes.summary, digits = 4)
+
+write.csv(dSlopes.summary, "2021.02.09_dSlopes_summary.csv")
+
+#|- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - |
+
+
+
+
+```
+
+### 3.a Slope Tables 1hr
+```{r 3.a Slope Tables 1hr SlopeTable.1hr }
+SlopeTable.1hr <- kable(ksSlopes1hr.summary, digits = 4)
+SlopeTable.1hr
+```
+
+
+
+### 3.b Slope Tables 80%
+```{r 3.b SlopeTable.80}
+SlopeTable.80 <- kable(ksSlopes80.summary, digits = 4)
+SlopeTable.80
+```
+
+
+
+### 3.c Slope Tables 70%
+```{r S3.c Slope Tables SlopeTable.70 }
+SlopeTable.70 <- kable(ksSlopes70.summary, digits = 4)
+SlopeTable.70
+```
+
+
+
+### 3.d Slope Tables all points
+```{r 3.d dSlopes Table }
+dSlopeTable <- kable(dSlopes.summary, digits = 4)
+dSlopeTable
+```
+
+
+
+
+
+
+
+
+# 4.) Summary Plots
+## 4.a Plots 80% Slope for Corrected Slopes
+```{r}
+plot80 <- ggplot(ksSlopes.80, aes(Treatment, CorrSlope)) +
+            geom_jitter(color = "grey") +
+            geom_jitter(data = ksSlopes.80, aes(Treatment, CorrSlope)) +
+            # geom_jitter(data = krillslopes80.filtered, aes(Treatment, slope)) +
+            # geom_jitter(data = krillslopes70.filtered, aes(Treatment, slope)) +
+            # geom_jitter(data = T1to4krillslopes.filtered, aes(Treatment, slope)) +
+            # geom_jitter(aes(colour = Treatment)) +
+            geom_boxplot(notch = TRUE, outlier.shape = NA, colour = "green") +
+            geom_point(data = ksSlopes80.summary, aes(x=Treatment, y=mean), size=5, color = "purple") + 
+            geom_errorbar(data = ksSlopes80.summary, 
+                          aes(x=Treatment, y=mean, ymin = mean-sd, ymax = mean+sd), 
+                          color = "blue") +
+            geom_errorbar(data = ksSlopes80.summary,
+                          aes(x=Treatment, y=mean, ymin = mean-ci, ymax = mean+ci),
+                          colour = "red") +
+            # facet_wrap(~TrialID) +
+            ggtitle("ksSlopes80, (80% oxygen) Corrected Slope") +
+            theme_bw() 
+
+
+plot80
+```
+
+The purple dots represent the mean- all trials included
+Confidence Intervals set to 95
+Green boxplots show from the 25th percentil to the 75th percentile
+error bars +/- SD shown in blue
+error bars(CI) +/- our confidence intervals- shown in red
+
+
+
+## 4.b Plots 70% Slope for Corrected Slopes
+```{r 4.b Plots 70% Corrected Slopes}
+plot70 <- ggplot(ksSlopes.70, aes(Treatment, CorrSlope)) +
+            geom_jitter(color = "grey") +
+            geom_jitter(data = ksSlopes.70, aes(Treatment, CorrSlope)) +
+            # geom_jitter(data = krillslopes80.filtered, aes(Treatment, slope)) +
+            # geom_jitter(data = krillslopes70.filtered, aes(Treatment, slope)) +
+            # geom_jitter(data = T1to4krillslopes.filtered, aes(Treatment, slope)) +
+            # geom_jitter(aes(colour = Treatment)) +
+            geom_boxplot(notch = TRUE, outlier.shape = NA, colour = "green") +
+            geom_point(data = ksSlopes70.summary, aes(x=Treatment, y=mean), size=5, color = "purple") + 
+            geom_errorbar(data = ksSlopes70.summary, 
+                          aes(x=Treatment, y=mean, ymin = mean-sd, ymax = mean+sd), 
+                          color = "blue") +
+            geom_errorbar(data = ksSlopes70.summary,
+                          aes(x=Treatment, y=mean, ymin = mean-ci, ymax = mean+ci),
+                          colour = "red") +
+            # facet_wrap(~TrialID) +
+            ggtitle("ksSlopes70, (70% oxygen) Corrected Slope") +
+            theme_bw() 
+
+plot70
+
+```
+
+The purple dots represent the mean- all trials included
+Confidence Intervals set to 95
+Green boxplots show from the 25th percentil to the 75th percentile
+error bars +/- SD shown in blue
+error bars(CI) +/- our confidence intervals- shown in red
+
+
+
+
+## 4.c Plots threshold (1hr) Slope for Corrected Slopes
+```{r 4.c Plots 1hr threshold Slope for Corrected Slopes}
+
+Onehrplot <- ggplot(ksSlopes.1hr, aes(Treatment, CorrSlope)) +
+            geom_jitter(color = "grey") +
+            geom_jitter(data = ksSlopes.1hr, aes(Treatment, CorrSlope)) +
+            # geom_jitter(data = krillslopes80.filtered, aes(Treatment, slope)) +
+            # geom_jitter(data = krillslopes70.filtered, aes(Treatment, slope)) +
+            # geom_jitter(data = T1to4krillslopes.filtered, aes(Treatment, slope)) +
+            # geom_jitter(aes(colour = Treatment)) +
+            geom_boxplot(notch = TRUE, outlier.shape = NA, colour = "green") +
+            geom_point(data = ksSlopes1hr.summary, aes(x=Treatment, y=mean), size=5, color = "purple") + 
+            geom_errorbar(data = ksSlopes1hr.summary, 
+                          aes(x=Treatment, y=mean, ymin = mean-sd, ymax = mean+sd), 
+                          color = "blue") +
+            geom_errorbar(data = ksSlopes1hr.summary,
+                          aes(x=Treatment, y=mean, ymin = mean-ci, ymax = mean+ci),
+                          colour = "red") +
+            # facet_wrap(~TrialID) +
+            ggtitle("ksSlopes1hr, (1hr cutoff) Corrected Slope") +
+            theme_bw() 
+
+Onehrplot 
+
+```
+
+The purple dots represent the mean- all trials included
+Confidence Intervals set to 95
+Green boxplots show from the 25th percentil to the 75th percentile
+error bars +/- SD shown in blue
+error bars(CI) +/- our confidence intervals- shown in red
+
+
+## 4.c Plots 1hr threshold Slope for Corrected Slopes
+```{r Plots 1hr threshold Slope for Corrected Slopes}
+
+dSlopesPlot <- ggplot(dSlopes, aes(Treatment, CorrSlope)) +
+            geom_jitter(color = "grey") +
+            geom_jitter(data = dSlopes, aes(Treatment, CorrSlope)) +
+            # geom_jitter(data = krillslopes80.filtered, aes(Treatment, slope)) +
+            # geom_jitter(data = krillslopes70.filtered, aes(Treatment, slope)) +
+            # geom_jitter(data = T1to4krillslopes.filtered, aes(Treatment, slope)) +
+            # geom_jitter(aes(colour = Treatment)) +
+            geom_boxplot(notch = TRUE, outlier.shape = NA, colour = "green") +
+            geom_point(data = dSlopes.summary, aes(x=Treatment, y=mean), size=5, color = "purple") + 
+            geom_errorbar(data = dSlopes.summary, 
+                          aes(x=Treatment, y=mean, ymin = mean-sd, ymax = mean+sd), 
+                          color = "blue") +
+            geom_errorbar(data = dSlopes.summary,
+                          aes(x=Treatment, y=mean, ymin = mean-ci, ymax = mean+ci),
+                          colour = "red") +
+            # facet_wrap(~TrialID) +
+            ggtitle("dSlopes, (all points) Corrected Slope") +
+            theme_bw() 
+dSlopesPlot
+
+```
+
+
+
+
+
+
+# 5.) Descriptive Statisitics 
+```{r 25.) Descriptive Statisitics}
+library(tidyr)
+#Remove NAs
+#krill <- na.omit(krill)
+#Calculate mean and standard deviation for each treatment per each dataset
+# blanks are to be removed from treatments
+
+# dSlopes<- droplevels(filter(dSlopes, Treatment != "n/a"))
+# ksSlopes80<- droplevels(filter(ksSlopes80, Treatment != "n/a"))
+# ksSlopes70<- droplevels(filter(ksSlopes70, Treatment != "n/a"))
+# ksSlopes1hr<- droplevels(filter(ksSlopes1hr, Treatment != "n/a"))
+
+
+dSlopes_Avg <- tapply(dSlopes$CorrSlope, (dSlopes$Treatment), mean)
+dSlopes_Med <- tapply(dSlopes$CorrSlope, (dSlopes$Treatment), median)
+dSlopes_Std <- tapply(dSlopes$CorrSlope, (dSlopes$Treatment), sd)
+
+ksSlopes.80_Avg <- tapply(ksSlopes.80$CorrSlope, (ksSlopes.80$Treatment), mean)
+ksSlopes.80_Med <- tapply(ksSlopes.80$CorrSlope, (ksSlopes.80$Treatment), median)
+ksSlopes.80_Std <- tapply(ksSlopes.80$CorrSlope, (ksSlopes.80$Treatment), sd)
+
+ksSlopes.70_Avg <- tapply(ksSlopes.70$CorrSlope, (ksSlopes.70$Treatment), mean)
+ksSlopes.70_Med <- tapply(ksSlopes.70$CorrSlope, (ksSlopes.70$Treatment), median)
+ksSlopes.70_Std <- tapply(ksSlopes.70$CorrSlope, (ksSlopes.70$Treatment), sd)
+
+ksSlopes.1hr_Avg <- tapply(ksSlopes.1hr$CorrSlope, (ksSlopes.1hr$Treatment), mean)
+ksSlopes.1hr_Med <- tapply(ksSlopes.1hr$CorrSlope, (ksSlopes.1hr$Treatment), median)
+ksSlopes.1hr_Std <- tapply(ksSlopes.1hr$CorrSlope, (ksSlopes.1hr$Treatment), sd)
+
+
+#Put it all together
+Slope_Stats <- cbind(dSlopes_Avg, dSlopes_Med, dSlopes_Std,
+                     ksSlopes.80_Avg, ksSlopes.80_Med, ksSlopes.80_Std,
+                     ksSlopes.70_Avg, ksSlopes.70_Med, ksSlopes.70_Std,
+                     ksSlopes.1hr_Avg, ksSlopes.1hr_Med, ksSlopes.1hr_Std)
+
+colnames(Slope_Stats) [1:12] <-c("Avg All Points Corrected Slopes", "Med All Points Corrected Slopes", "All Points Corrected Slopes SD", "Avg 80% DO Corrected Slopes", "Med 80% DO Corrected Slopes", "80% DO Corrected Slopes SD", "Avg 70% DO Corrected Slopes", "Med 70% DO Corrected Slopes", "70% DO Corrected Slopes SD", "Avg 1hr Corrected Slopes", "Med 1hr Corrected Slopes", "1hr Corrected Slopes SD")
+
+
+write.csv(Slope_Stats, "2021.02.09_Slope_Stats.csv")
+
+kable(Slope_Stats)
+
+```
+
+
+
+
+# 6.) Fitting my Linear Mixed-Effects Models to my Dataframes 
+```{r Repeated measures analysis}
+#Using a mixed model to find significant differences bertween MOATs
+#library(nlme)
+library(lme4)
+library(lmerTest)
+
+# Corrected Slopes , Treatment taking into account MOATS
+
+
+# ksSlopes.80<- droplevels(filter(ksSlopes.80, Treatment != "n/a"))
+# ksSlopes.70<- droplevels(filter(ksSlopes.70, Treatment != "n/a"))
+# ksSlopes.1hr<- droplevels(filter(ksSlopes.1hr, Treatment != "n/a"))
+# dSlopes<- droplevels(filter(dSlopes, Treatment != "n/a"))
+
+
+ksSlopes.1hr_howmanyanimalsin_CHG <- subset(ksSlopes.1hr, Treatment == "CHG")
+ks1hrCHGno <- unique(ksSlopes.1hr_howmanyanimalsin_CHG$KrillID)
+# 16 animals in All Change across 4 trials
+
+ksSlopes.1hr_howmanyanimalsin_CUR <- subset(ksSlopes.1hr, Treatment == "CUR")
+ks1hrCURno <- unique(ksSlopes.1hr_howmanyanimalsin_CUR$KrillID)
+# 19 animals from Current Treatment across 4 trials
+
+ksSlopes.1hr_howmanyanimalsin_TMP <- subset(ksSlopes.1hr, Treatment == "TMP")
+ks1hrTMPno <- unique(ksSlopes.1hr_howmanyanimalsin_TMP$KrillID)
+# 16 animals in high Temperature Treatment across 4 trials
+
+
+16+19+16
+# [1] 51
+
+```
+
+
+#### 6.a 1hr Dataframe - LMER
+```{r, 6.a) 1hr Dataframe - LMER}
+lmer.ksSlopes.1hr <- lmer(CorrSlope ~ Treatment + (1|MOATS), data = ksSlopes.1hr)
+summary(lmer.ksSlopes.1hr)
+# All Change Against Current 
+# All Change Against High Temperature
+```
+
+"1hr Dataset" - No Treatment Effect Found
+
+Random Effects Model variance accounting for a possible MOATs effect remains significantly small.
+No treatment effect observed. 
+Neither correlation or T values between "All Change(CHG)" to "Current(CUR)" and "High Temperature(TMP)" 
+This model doesn't consider High Temperature directly against Current
+Model re-ogranized/re-leveled below
+
+
+#### 6.b 1hr Dataframe - LMER releved Current 1st
+```{r 6.b) 1hr threshold Dataframe - LMER}
+
+levels(ksSlopes.1hr$Treatment)
+# lmer.ksSlopes.1hr 
+ksSlopes.1hr$Treatment <- fct_relevel(ksSlopes.1hr$Treatment, "CUR")
+lmer.ksSlopes.1hr <- lmer(CorrSlope ~ Treatment + (1|MOATS), data = ksSlopes.1hr)
+summary(lmer.ksSlopes.1hr)
+
+```
+
+The Current Conditions to Hight Temperature comparison did not display a treatment effect. 
+
+Possible reasons for such small amount of variance include only 51 animals in trial.
+16 animals from the "All Change" treatment were in included across four trials.
+19 animals from the "Current" treatment were in included across four trials.
+16 animals from the "High Temperarure" treatment were in included across four trials.
+(totals 51 animals)
+
+so signal over the noise- why?
+
+1hr may not have allowed enough observations to show a disernable difference across treatments.
+However, Krill could just be proving to be a robust organism, able to withstand a cross stress environment. 
+It's more likely that sample size was small.
+
+
+
+#### 6.c 80% Threshold Dataframe - LMER
+```{r, 6.c) 1hr Dataframe - LMER}
+lmer.ksSlopes.80 <- lmer(CorrSlope ~ Treatment + (1|MOATS), data = ksSlopes.80)
+summary(lmer.ksSlopes.80)
+# All Change Against Current 
+# All Change Against High Temperature
+```
+
+The 80% (DO) Threshold t values are slightly smaller. 
+The variance around a MOATs effect remains significantly small.
+No treatment effect observed.
+Model re-organized/re-leveled below to compare "Current" against "High Temperature" directly
+
+
+
+#### 6.d 80% Threshold - LMER releved Current 1st
+```{r 6.d) 80% Dataframe - LMER}
+
+levels(ksSlopes.80$Treatment)
+# lmer.ksSlopes.1hr 
+ksSlopes.80$Treatment <- fct_relevel(ksSlopes.80$Treatment, "CUR")
+lmer.ksSlopes.80 <- lmer(CorrSlope ~ Treatment + (1|MOATS), data = ksSlopes.80)
+summary(lmer.ksSlopes.80)
+
+```
+When comparing Current against "High Temperature" and "All Change" the T values remain small but the TMP to CUR is somewhat larger. 
+
+Still, no discernible treatment effect, no discernible MOATS effect. 
+
+
+
+#### 6.e 70% Threshold Dataframe - LMER
+```{r, 6.e) 70% Dataframe - LMER}
+lmer.ksSlopes.70 <- lmer(CorrSlope ~ Treatment + (1|MOATS), data = ksSlopes.70)
+summary(lmer.ksSlopes.70)
+# All Change Against Current 
+# All Change Against High Temperature
+```
+
+
+The variance around a MOATs effect remains significantly small in this 70% Threshold dataset.
+No treatment effect observed.
+Model re-organized/re-leveled below to compare "Current" against "High Temperature" directly
+
+
+#### 6.f 70% Threshold - LMER releved Current 1st
+```{r 26.f) 70% Dataframe - LMER}
+
+levels(ksSlopes.70$Treatment)
+# lmer.ksSlopes.1hr 
+ksSlopes.70$Treatment <- fct_relevel(ksSlopes.70$Treatment, "CUR")
+lmer.ksSlopes.70 <- lmer(CorrSlope ~ Treatment + (1|MOATS), data = ksSlopes.70)
+summary(lmer.ksSlopes.70)
+
+```
+
+No discernible treatment effect, no discernible MOATS effect. 
+None of the "threshold confined" datasets displayed a MOATs or Treatment Effect.
+
+
+Below shows the comparison is slopes values when all data points were considered. 
+
+
+#### 6.g All Points "dSlopes" Dataframe - LMER
+```{r, 6.g) All Points Dataframe - LMER}
+lmer.dSlopes<- lmer(CorrSlope ~ Treatment + (1|MOATS), data = dSlopes)
+summary(lmer.dSlopes)
+# All Change Against Current 
+# All Change Against High Temperature
+```
+
+
+The variance around a MOATs effect remains so significantly small.
+No MOATs effect
+No treatment effect observed.
+Model re-organized/re-leveled below to compare "Current" against "High Temperature" directly
+
+
+#### 6.f) All Points - LMER releved Current 1st
+```{r 6.f) All Points - LMER}
+
+levels(dSlopes$Treatment)
+
+dSlopes$Treatment <- fct_relevel(dSlopes$Treatment, "CUR")
+lmer.dSlopes <- lmer(CorrSlope ~ Treatment + (1|MOATS), data = dSlopes)
+summary(lmer.dSlopes)
+
+```
+
+
+
+```{r Models Commented Out & next step thoughts}
+# 
+# # Just a chunk of the models held back case I need them.  
+# 
+# lmer.ksSlopes.80 <- lmer(CorrSlope ~ Treatment + (1|MOATS), data = ksSlopes.80)
+# summary(lmer.ksSlopes.80)
+# 
+# lmer.ksSlopes.70 <- lmer(CorrSlope ~ Treatment + (1|MOATS), data = ksSlopes.70)
+# summary(lmer.ksSlopes.70)
+# 
+# lmer.dSlopes <- lmer(CorrSlope ~ Treatment + (1|MOATS), data = dSlopes)
+# summary(lmer.dSlopes)
+# 
+# 
+# 
+# # what about different rounds on different days?
+```
+
+
+
+
+```{r}
+
+Onehrplot
+```
+
+
+```{r}
+plot70
+```
+
+
+
+```{r}
+plot80
+```
+
+
+```{r}
+dSlopesPlot
+```
+
+
+
+
+*Slope Statistics*
+```{r}
+kable(Slope_Stats)
+```
+
+
+*Krill Slopes 1hr Summary Table*
+```{r}
+kable(ksSlopes1hr.summary, digits = 4)
+```
+
+
+*Krill Slopes (70min cutoff) Summary Table*
+```{r}
+kable(ksSlopes70.summary, digits = 8)
+```
+
+
+*Krill Slopes (80min cutoff) Summary Table*
+```{r}
+kable(ksSlopes80.summary, digits = 8)
+```
+
+
+*Krill Slopes (all points) Summary Table*
+```{r}
+kable(dSlopes.summary, digits = 8)
+```
+
+
+*Krill Slopes (1hr cutoff) Mixed Effects Model*
+```{r}
+summary(lmer.ksSlopes.1hr)
+```
+
+
+*Krill Slopes (80min cutoff) Mixed Effects Model*
+```{r}
+summary(lmer.ksSlopes.80)
+```
+
+
+*Krill Slopes (70min cutoff) Mixed Effects Model*
+```{r}
+summary(lmer.ksSlopes.70)
+```
+
+
+*Krill Slopes (all points) Mixed Effects Model*
+```{r}
+summary(lmer.dSlopes)
+```
+
+
+
+# 7.) Linear Models All Change Compared Against Current and High Temperature
+## 7.a) dSlopes all points 
+```{r}
+
+dSlopes$Treatment <- as.character(dSlopes$Treatment)
+
+dSlopeFIT <- lm(CorrSlope ~ Treatment, data=dSlopes)
+summary(dSlopeFIT )
+```
+
+```{r}
+plot(dSlopeFIT)
+```
+
+
+
+# 7.b) Linear Models All Change Compared Against Current and High Temperature (80%)
+```{r}
+ksSlopes.80$Treatment <- as.character(ksSlopes.80$Treatment)
+
+ksSlope.80FIT <- lm(CorrSlope ~ Treatment, data=ksSlopes.80)
+summary(ksSlope.80FIT)
+```
+
+```{r}
+plot(ksSlope.80FIT)
+```
+
+
+
+# 7.c) Linear Models All Change Compared Against Current and High Temperature (70%)
+```{r}
+ksSlopes.70$Treatment <- as.character(ksSlopes.70$Treatment)
+
+ksSlope.70FIT <- lm(CorrSlope ~ Treatment, data=ksSlopes.70)
+summary(ksSlope.70FIT)
+```
+
+```{r}
+plot(ksSlope.70FIT)
+```
+
+
+
+
+
+# 7.d) Linear Models All Change Compared Against Current and High Temperature (1hr)
+```{r}
+ksSlopes.1hr$Treatment <- as.character(ksSlopes.1hr$Treatment)
+
+ksSlope.1hrFIT <- lm(CorrSlope ~ Treatment, data=ksSlopes.1hr)
+summary(ksSlope.1hrFIT)
+```
+
+```{r}
+plot(ksSlope.1hrFIT)
+```
+Noticing that the 1hr dataset doesn't fit the model well- going to further explore the model. 
+Maybe this just calls a difference between Trial 03 and all others
+
+
+
+# Question Times 1hr Dataset 
+When I write the following expression does this mean that I'm looking at the relationship of (CorrSlope ~ Treatment) of each MOATs?
+```{r}
+ksSlope.1hr.MOATsFIT <- lm(CorrSlope ~ Treatment + MOATS, data=ksSlopes.1hr)
+summary(ksSlope.1hr.MOATsFIT)
+```
+
+# Want to also account for Trial ID
+
+```{r}
+ksSlope.1hr.MOATsTrialIDFIT <- lm(CorrSlope ~ Treatment + MOATS + TrialID, data=ksSlopes.1hr)
+summary(ksSlope.1hr.MOATsTrialIDFIT)
+```
+
+# Rather than MOATs I'll try Trial ID in my mixed effects model
+
+# 9.x Trial ID
+#### 9.a 1hr Dataframe - LMER
+```{r, 6.a) 1hr -LMER}
+lmer.ksSlopesTrialID.1hr <- lmer(CorrSlope ~ Treatment + (1|TrialID), data = ksSlopes.1hr)
+summary(lmer.ksSlopesTrialID.1hr)
+# All Change Against Current 
+# All Change Against High Temperature
+```
+
+"1hr Dataset" -still no Treatment Effect Found
+
+
+
+#### 6.b 1hr Dataframe - LMER releved Current 1st
+```{r 6.b 1hr Dataframe-LMER}
+
+levels(ksSlopes.1hr$Treatment)
+# lmer.ksSlopes.1hr 
+ksSlopes.1hr$Treatment <- fct_relevel(ksSlopes.1hr$Treatment, "CUR")
+lmer.ksSlopesTrialID.1hr <- lmer(CorrSlope ~ Treatment + (1|TrialID), data = ksSlopes.1hr)
+summary(lmer.ksSlopesTrialID.1hr)
+
+```
+Trial Variance may not be leading vairiance determinator. 
+
+
+
+
+
+```{r}
+#**************E*N*D*************# 
+#*********************************
+## END OF SCRIPT | END OF DOCUMENT 
+#*********************************
+```
+
+
+## END OF SCRIPT | END OF DOCUMENT
+
+
+
+
+
+
+
+
+
+
+
+
