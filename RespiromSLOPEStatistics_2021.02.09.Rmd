@@ -238,9 +238,9 @@ dSlopeTable
 
 
 # 4.) Summary Plots
-## 4.a Plots 80% Slope for Corrected Slopes
-```{r 4.a Boxplot for corrected 80% slopes, warning=FALSE}
 
+## 4.a 80% Threshold Corrected Slopes 
+```{r }
 
 plot80 <- ggplot(ksSlopes.80, aes(Treatment, CorrSlope)) +
             geom_jitter(color = "grey") +
@@ -265,6 +265,7 @@ plot80 <- ggplot(ksSlopes.80, aes(Treatment, CorrSlope)) +
 plot80
 ```
 
+
 The purple dots represent the mean- all trials included
 Confidence Intervals set to 95
 Green boxplots show from the 25th percentil to the 75th percentile
@@ -274,7 +275,8 @@ error bars(CI) +/- our confidence intervals- shown in red
 
 
 ## 4.b Plots 70% Slope for Corrected Slopes
-```{r 4.b Plots 70% Corrected Slopes}
+```{r }
+
 plot70 <- ggplot(ksSlopes.70, aes(Treatment, CorrSlope)) +
             geom_jitter(color = "grey") +
             geom_jitter(data = ksSlopes.70, aes(Treatment, CorrSlope)) +
